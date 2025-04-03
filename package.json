@@ -2,12 +2,11 @@
   "name": "nextjs",
   "version": "0.1.0",
   "private": true,
-  "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
-  },
+ "scripts": {
+  "build": "next build && next export",
+  "start": "npx serve@latest out"
+},
+
   "dependencies": {
     "@hookform/resolvers": "^3.9.0",
     "@monaco-editor/react": "^4.6.0",
