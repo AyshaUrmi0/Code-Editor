@@ -14,8 +14,6 @@ const nextConfig = {
       '@monaco-editor/react',
       'lucide-react',
     ],
-    serverActions: false,
-    serverComponents: false,
   },
   // Required for Pyodide (WebAssembly)
   webpack: (config, { isServer }) => {

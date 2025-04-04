@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import Editor from "@monaco-editor/react";
+import Editor, { loader } from "@monaco-editor/react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,18 @@ const themes = [
   { value: "light", label: "Light" },
 ];
 
+// Add this before the CodeEditor component
+loader.config({
+  paths: {
+    vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs'
+  },
+  'vs/nls': {
+    availableLanguages: {
+      '*': 'en'
+    }
+  }
+});
+
 export function CodeEditor() {
   const [mounted, setMounted] = useState(false);
   const [language, setLanguage] = useState("javascript");
@@ -34,24 +46,44 @@ export function CodeEditor() {
 
   // Initialize Pyodide for Python execution
   useEffect(() => {
-    if (language === "python") {
-      const loadPyodide = async () => {
-        setOutput(prev => [...prev, "⏳ Loading Python runtime (Pyodide)..."]);
-        try {
-          // @ts-ignore - Pyodide will be loaded from CDN
-          const pyodide = await window.loadPyodide({
-            indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/"
-          });
-          setPyodide(pyodide);
-          setOutput(prev => [...prev, "✅ Python runtime ready"]);
-        } catch (error) {
-          setOutput(prev => [...prev, `❌ Failed to load Python: ${error instanceof Error ? error.message : String(error)}`]);
-        }
+    if (language === "python" && !pyodide) {
+      const loadPyodideScript = () => {
+        setOutput(prev => [...prev, "⏳ Loading Python runtime..."]);
+        
+        // Create a script element for Pyodide
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js';
+        script.crossOrigin = 'anonymous';
+        
+        script.onload = async () => {
+          try {
+            // Initialize Pyodide
+            const loadPyodide = (window as any).loadPyodide;
+            const pyodideInstance = await loadPyodide({
+              indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/',
+            });
+            
+            // Test the Pyodide instance
+            await pyodideInstance.runPythonAsync('print("Pyodide loaded successfully!")');
+            
+            setPyodide(pyodideInstance);
+            setOutput(prev => [...prev, "✅ Python runtime is ready!"]);
+          } catch (err) {
+            console.error('Pyodide loading error:', err);
+            setOutput(prev => [...prev, `❌ Error loading Python: ${err instanceof Error ? err.message : String(err)}`]);
+          }
+        };
+        
+        script.onerror = () => {
+          setOutput(prev => [...prev, "❌ Failed to load Python runtime. Please check your internet connection and try again."]);
+        };
+        
+        // Add the script to the document
+        document.head.appendChild(script);
       };
-      
-      if (!pyodide) {
-        loadPyodide();
-      }
+
+      // Load Pyodide
+      loadPyodideScript();
     }
   }, [language]);
 
@@ -108,18 +140,36 @@ export function CodeEditor() {
             break;
             
           case 'python':
-            if (pyodide) {
-              try {
-                await pyodide.loadPackagesFromImports(code);
-                const result = await pyodide.runPythonAsync(code);
-                if (result !== undefined) {
-                  setOutput(prev => [...prev, `Python output: ${String(result)}`]);
-                }
-              } catch (error) {
-                setOutput(prev => [...prev, `Python error: ${error instanceof Error ? error.message : String(error)}`]);
+            if (!pyodide) {
+              setOutput(prev => [...prev, "⚠️ Python runtime is not ready. Please wait for it to load..."]);
+              return;
+            }
+            try {
+              // Capture Python's stdout
+              pyodide.runPython(`
+                import sys
+                from io import StringIO
+                sys.stdout = StringIO()
+              `);
+              
+              // Run the user's code
+              const result = await pyodide.runPythonAsync(code);
+              
+              // Get captured output
+              const stdout = pyodide.runPython("sys.stdout.getvalue()");
+              if (stdout) {
+                setOutput(prev => [...prev, stdout]);
               }
-            } else {
-              setOutput(prev => [...prev, "Python runtime not loaded yet. Please try again."]);
+              
+              // If there's a return value, show it
+              if (result !== undefined && result !== null) {
+                setOutput(prev => [...prev, `=> ${result}`]);
+              }
+              
+              // Reset stdout
+              pyodide.runPython("sys.stdout = sys.__stdout__");
+            } catch (error) {
+              setOutput(prev => [...prev, `❌ Python Error: ${error instanceof Error ? error.message : String(error)}`]);
             }
             break;
             
@@ -221,7 +271,7 @@ export function CodeEditor() {
         value={code}
         onChange={(value) => setCode(value || "")}
         options={{
-          minimap: { enabled: true },
+          minimap: { enabled: false },
           fontSize: 14,
           formatOnPaste: true,
           formatOnType: true,
@@ -237,6 +287,12 @@ export function CodeEditor() {
             enabled: true,
           },
         }}
+        beforeMount={(monaco) => {
+          // Disable the automatic type acquisition
+          monaco.languages.typescript.javascriptDefaults.setEagerModelSync(true);
+          monaco.languages.typescript.typescriptDefaults.setEagerModelSync(true);
+        }}
+        loading={<div className="p-4 text-sm text-muted-foreground">Loading editor...</div>}
       />
       
       {/* HTML Preview (only shown for HTML) */}
