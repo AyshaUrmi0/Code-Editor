@@ -24,7 +24,7 @@ const themes = [
 // Add this before the CodeEditor component
 loader.config({
   paths: {
-    vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.2/min/vs'
+    vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.46.0/min/vs'
   },
   'vs/nls': {
     availableLanguages: {
