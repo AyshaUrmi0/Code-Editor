@@ -85,7 +85,7 @@ export function CodeEditor() {
       // Load Pyodide
       loadPyodideScript();
     }
-  }, [language]);
+  }, [language, pyodide]);
 
   useEffect(() => {
     setMounted(true);
