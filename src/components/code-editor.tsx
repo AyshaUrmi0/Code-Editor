@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useRef } from "react";
 import Editor, { loader } from "@monaco-editor/react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Play, ChevronDown, Terminal } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import { Card } from "./ui/card";
+import { Button } from "./ui/button";
+import { Play, ChevronDown, Terminal, Loader2 } from "lucide-react";
 
 const languages = [
   { value: "javascript", label: "JavaScript" },
@@ -217,11 +217,11 @@ export function CodeEditor() {
   }
 
   return (
-    <Card className="w-full overflow-hidden border rounded-lg">
-      <div className="flex items-center justify-between p-4 border-b bg-card">
-        <div className="flex items-center gap-4">
+    <Card className="w-full overflow-hidden border rounded-lg shadow-lg">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border-b bg-card gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
           <Select value={language} onValueChange={setLanguage}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Select language" />
             </SelectTrigger>
             <SelectContent>
@@ -233,7 +233,7 @@ export function CodeEditor() {
             </SelectContent>
           </Select>
           <Select value={theme} onValueChange={setTheme}>
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder="Select theme" />
             </SelectTrigger>
             <SelectContent>
@@ -245,66 +245,89 @@ export function CodeEditor() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 w-full sm:w-auto">
           <Button 
             variant="outline" 
             size="sm" 
             onClick={clearOutput}
             disabled={output.length === 0}
+            className="flex-1 sm:flex-none"
           >
             Clear Output
           </Button>
           <Button 
             onClick={handleRun} 
             disabled={isRunning || (language === "python" && !pyodide)}
-            className="gap-2"
+            className="gap-2 flex-1 sm:flex-none"
           >
-            <Play className="w-4 h-4" />
-            {isRunning ? "Running..." : "Run"}
+            {isRunning ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Running...
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4" />
+                Run
+              </>
+            )}
           </Button>
         </div>
       </div>
-      <Editor
-        height="50vh"
-        language={language}
-        theme={theme}
-        value={code}
-        onChange={(value) => setCode(value || "")}
-        options={{
-          minimap: { enabled: false },
-          fontSize: 14,
-          formatOnPaste: true,
-          formatOnType: true,
-          scrollBeyondLastLine: false,
-          smoothScrolling: true,
-          cursorSmoothCaretAnimation: "on",
-          padding: { top: 16, bottom: 16 },
-          lineNumbers: "on",
-          glyphMargin: false,
-          folding: true,
-          automaticLayout: true,
-          bracketPairColorization: {
-            enabled: true,
-          },
-        }}
-        beforeMount={(monaco) => {
-          // Disable the automatic type acquisition
-          monaco.languages.typescript.javascriptDefaults.setEagerModelSync(true);
-          monaco.languages.typescript.typescriptDefaults.setEagerModelSync(true);
-        }}
-        loading={<div className="p-4 text-sm text-muted-foreground">Loading editor...</div>}
-      />
+
+      <div className="relative">
+        <Editor
+          height="60vh"
+          language={language}
+          theme={theme}
+          value={code}
+          onChange={(value) => setCode(value || "")}
+          options={{
+            minimap: { enabled: false },
+            fontSize: 14,
+            formatOnPaste: true,
+            formatOnType: true,
+            scrollBeyondLastLine: false,
+            smoothScrolling: true,
+            cursorSmoothCaretAnimation: "on",
+            padding: { top: 16, bottom: 16 },
+            lineNumbers: "on",
+            glyphMargin: false,
+            folding: true,
+            automaticLayout: true,
+            bracketPairColorization: {
+              enabled: true,
+            },
+            wordWrap: "on",
+            wrappingStrategy: "advanced",
+          }}
+          beforeMount={(monaco) => {
+            monaco.languages.typescript.javascriptDefaults.setEagerModelSync(true);
+            monaco.languages.typescript.typescriptDefaults.setEagerModelSync(true);
+          }}
+          loading={
+            <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Loading editor...
+              </div>
+            </div>
+          }
+        />
+      </div>
       
       {/* HTML Preview (only shown for HTML) */}
       {language === "html" && (
         <div className="border-t">
-          <div className="flex items-center p-2 text-sm font-medium bg-gray-100 dark:bg-gray-800">
-            <Terminal className="w-4 h-4 mr-2" />
-            <span>HTML Preview</span>
+          <div className="flex items-center justify-between p-2 text-sm font-medium bg-gray-100 dark:bg-gray-800">
+            <div className="flex items-center">
+              <Terminal className="w-4 h-4 mr-2" />
+              <span>HTML Preview</span>
+            </div>
           </div>
           <iframe 
             ref={iframeRef}
-            className="w-full h-64 border-0 bg-white"
+            className="w-full h-64 border-0 bg-white dark:bg-gray-900"
             sandbox="allow-scripts allow-same-origin"
             title="HTML Preview"
           />
@@ -314,31 +337,40 @@ export function CodeEditor() {
       {/* Output Console */}
       <div className="border-t">
         <button 
-          className="flex items-center justify-between w-full p-2 text-sm font-medium bg-gray-100 dark:bg-gray-800"
+          className="flex items-center justify-between w-full p-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
           onClick={() => setShowOutput(!showOutput)}
         >
           <div className="flex items-center">
             <Terminal className="w-4 h-4 mr-2" />
             <span>Console Output</span>
+            {output.length > 0 && (
+              <span className="ml-2 px-2 py-0.5 text-xs bg-gray-200 dark:bg-gray-700 rounded-full">
+                {output.length}
+              </span>
+            )}
           </div>
-          <ChevronDown className={`w-4 h-4 transition-transform ${showOutput ? 'rotate-180' : ''}`} />
+          <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showOutput ? 'rotate-180' : ''}`} />
         </button>
         {showOutput && (
           <div className="h-[120px] overflow-auto p-2 bg-background font-mono text-sm whitespace-pre-wrap">
             {output.length === 0 ? (
-              <div className="text-muted-foreground">Output will appear here...</div>
+              <div className="flex items-center justify-center h-full text-muted-foreground">
+                Output will appear here...
+              </div>
             ) : (
-              output.map((line, index) => (
-                <div key={index} className={
-                  line.startsWith('[error]') || line.includes('❌') ? 'text-red-500' : 
-                  line.startsWith('[warn]') ? 'text-yellow-500' : 
-                  line.includes('✅') ? 'text-green-500' :
-                  line.includes('⏳') ? 'text-blue-500' :
-                  'text-foreground'
-                }>
-                  {line}
-                </div>
-              ))
+              <div className="space-y-1">
+                {output.map((line, index) => (
+                  <div key={index} className={`py-0.5 ${
+                    line.startsWith('[error]') || line.includes('❌') ? 'text-red-500' : 
+                    line.startsWith('[warn]') ? 'text-yellow-500' : 
+                    line.includes('✅') ? 'text-green-500' :
+                    line.includes('⏳') ? 'text-blue-500' :
+                    'text-foreground'
+                  }`}>
+                    {line}
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}
