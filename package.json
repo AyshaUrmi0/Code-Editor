@@ -5,8 +5,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start",
-    "lint": "next lint",
+    "start": "npx serve@latest out",
     "clean": "rimraf .next build out"
   },
   "dependencies": {
