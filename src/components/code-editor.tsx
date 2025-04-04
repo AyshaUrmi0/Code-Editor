@@ -21,17 +21,18 @@ const themes = [
   { value: "light", label: "Light" },
 ];
 
-// Add this before the CodeEditor component
-loader.config({
-  paths: {
-    vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.46.0/min/vs'
-  },
-  'vs/nls': {
-    availableLanguages: {
-      '*': 'en'
-    }
-  }
-});
+// Configure Monaco Editor loader
+if (typeof window !== 'undefined') {
+  loader.config({
+    paths: {
+      vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.46.0/min/vs',
+    },
+    'vs/nls': {
+      availableLanguages: { '*': 'en' }
+    },
+    'vs/editor/editor.main': undefined
+  });
+}
 
 export function CodeEditor() {
   const [mounted, setMounted] = useState(false);
