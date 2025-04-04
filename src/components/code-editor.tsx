@@ -30,7 +30,7 @@ if (typeof window !== 'undefined') {
     'vs/nls': {
       availableLanguages: { '*': 'en' }
     },
-    'vs/editor/editor.main': undefined
+    monaco: undefined
   });
 }
 
