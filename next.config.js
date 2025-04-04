@@ -1,19 +1,21 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'export', // For static exports
+  distDir: 'build', // Changed from .next to build
   eslint: {
     ignoreDuringBuilds: true,
   },
   images: {
     unoptimized: true, // Required for static exports
   },
-  // Next.js 15 optimized configuration
+  // Disable server features since we're doing static export
   experimental: {
-    webpackBundleAnalyzer: false, // Disable bundle analyzer by default
     optimizePackageImports: [ // Optimize these imports
       '@monaco-editor/react',
       'lucide-react',
     ],
+    serverActions: false,
+    serverComponents: false,
   },
   // Required for Pyodide (WebAssembly)
   webpack: (config, { isServer }) => {
@@ -39,10 +41,14 @@ const nextConfig = {
 
     return config
   },
-  // Font optimization (new in Next.js 15)
-  optimizeFonts: true,
-  // Enable React compiler if using
+  // Enable React compiler
   reactStrictMode: true,
+  // Disable middleware and routing features
+  skipMiddlewareUrlNormalize: true,
+  skipTrailingSlashRedirect: true,
+  // Disable features we don't need for static export
+  compress: false,
+  poweredByHeader: false,
 }
 
 module.exports = nextConfig
