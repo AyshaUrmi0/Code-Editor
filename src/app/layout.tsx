@@ -2,7 +2,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
-import GrammarlyFix from '../components/GrammarlyFix'; // Import the client component
+import GrammarlyFix from '../components/GrammarlyFix'; 
 
 const inter = Inter({ subsets: ['latin'] });
 
