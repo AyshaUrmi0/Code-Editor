@@ -11,7 +11,7 @@ export default function Home() {
           <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight">Code Editor</h1>
             <p className="text-muted-foreground">
-              A beautiful code editor powered by Monaco Editor
+              Next Level Code Editor for your daily coding needs.
             </p>
           </div>
           <CodeEditor />
