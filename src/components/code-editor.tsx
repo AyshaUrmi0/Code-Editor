@@ -2,10 +2,24 @@
 
 import { useState, useEffect, useRef } from "react";
 import Editor, { loader } from "@monaco-editor/react";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "./ui/select";
 import { Card } from "./ui/card";
 import { Button } from "./ui/button";
-import { Play, ChevronDown, Terminal, Loader2 } from "lucide-react";
+import {
+  Play,
+  ChevronDown,
+  Terminal,
+  Loader2,
+  Download,
+  Sun,
+  Moon,
+} from "lucide-react";
 
 const languages = [
   { value: "javascript", label: "JavaScript" },
@@ -22,62 +36,85 @@ const themes = [
 ];
 
 // Configure Monaco Editor loader
-if (typeof window !== 'undefined') {
+if (typeof window !== "undefined") {
   loader.config({
     paths: {
-      vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs'
+      vs: "https://cdn.jsdelivr.net/npm/monaco-editor@0.43.0/min/vs",
     },
-    'vs/nls': {
-      availableLanguages: { '*': 'en' }
-    }
+    "vs/nls": {
+      availableLanguages: { "*": "en" },
+    },
   });
 }
 
 export function CodeEditor() {
   const [mounted, setMounted] = useState(false);
-  const [language, setLanguage] = useState("javascript");
+  const [language, setLanguage] = useState("python");
   const [theme, setTheme] = useState("vs-dark");
-  const [code, setCode] = useState(`// Start coding here\nconsole.log("Hello, world!");`);
+  const [code, setCode] = useState(
+    `// Start coding here\nprint("Hello, World!")`
+  );
   const [isRunning, setIsRunning] = useState(false);
   const [output, setOutput] = useState<string[]>([]);
   const [showOutput, setShowOutput] = useState(true);
   const [pyodide, setPyodide] = useState<any>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const [isDarkMode, setIsDarkMode] = useState(true);
+
+  const handleDownload = () => {
+    const blob = new Blob([code], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `code.${language}`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   // Initialize Pyodide for Python execution
   useEffect(() => {
     if (language === "python" && !pyodide) {
       const loadPyodideScript = () => {
-        setOutput(prev => [...prev, "⏳ Loading Python runtime..."]);
-        
+        setOutput((prev) => [...prev, "⏳ Loading Python runtime..."]);
+
         // Create a script element for Pyodide
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js';
-        script.crossOrigin = 'anonymous';
-        
+        const script = document.createElement("script");
+        script.src = "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js";
+        script.crossOrigin = "anonymous";
+
         script.onload = async () => {
           try {
             // Initialize Pyodide
             const loadPyodide = (window as any).loadPyodide;
             const pyodideInstance = await loadPyodide({
-              indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/',
+              indexURL: "https://cdn.jsdelivr.net/pyodide/v0.24.1/full/",
             });
-            
+
             // Test the Pyodide instance
-            await pyodideInstance.runPythonAsync('print("Pyodide loaded successfully!")');
-            
+            await pyodideInstance.runPythonAsync(
+              'print("Pyodide loaded successfully!")'
+            );
+
             setPyodide(pyodideInstance);
-            setOutput(prev => [...prev, "✅ Python runtime is ready!"]);
+            setOutput((prev) => [...prev, "✅ Python runtime is ready!"]);
           } catch (err) {
-            console.error('Pyodide loading error:', err);
-            setOutput(prev => [...prev, `❌ Error loading Python: ${err instanceof Error ? err.message : String(err)}`]);
+            console.error("Pyodide loading error:", err);
+            setOutput((prev) => [
+              ...prev,
+              `❌ Error loading Python: ${
+                err instanceof Error ? err.message : String(err)
+              }`,
+            ]);
           }
         };
-        
+
         script.onerror = () => {
-          setOutput(prev => [...prev, "❌ Failed to load Python runtime. Please check your internet connection and try again."]);
+          setOutput((prev) => [
+            ...prev,
+            "❌ Failed to load Python runtime. Please check your internet connection and try again.",
+          ]);
         };
-        
+
         // Add the script to the document
         document.head.appendChild(script);
       };
@@ -100,8 +137,8 @@ export function CodeEditor() {
 
   const handleRun = async () => {
     setIsRunning(true);
-    setOutput(prev => [...prev, `$ Running ${language} code...`]);
-    
+    setOutput((prev) => [...prev, `$ Running ${language} code...`]);
+
     try {
       // Clear previous outputs
       console.clear();
@@ -117,31 +154,38 @@ export function CodeEditor() {
         info: console.info,
       };
 
-      const captureConsole = (type: 'log' | 'error' | 'warn' | 'info') => {
+      const captureConsole = (type: "log" | "error" | "warn" | "info") => {
         return (...args: any[]) => {
-          const message = args.map(arg => 
-            typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-          ).join(' ');
-          setOutput(prev => [...prev, `[${type}] ${message}`]);
+          const message = args
+            .map((arg) =>
+              typeof arg === "object"
+                ? JSON.stringify(arg, null, 2)
+                : String(arg)
+            )
+            .join(" ");
+          setOutput((prev) => [...prev, `[${type}] ${message}`]);
           originalConsole[type](...args);
         };
       };
 
-      console.log = captureConsole('log');
-      console.error = captureConsole('error');
-      console.warn = captureConsole('warn');
-      console.info = captureConsole('info');
+      console.log = captureConsole("log");
+      console.error = captureConsole("error");
+      console.warn = captureConsole("warn");
+      console.info = captureConsole("info");
 
       try {
-        switch(language) {
-          case 'javascript':
-          case 'typescript':
+        switch (language) {
+          case "javascript":
+          case "typescript":
             new Function(code)();
             break;
-            
-          case 'python':
+
+          case "python":
             if (!pyodide) {
-              setOutput(prev => [...prev, "⚠️ Python runtime is not ready. Please wait for it to load..."]);
+              setOutput((prev) => [
+                ...prev,
+                "⚠️ Python runtime is not ready. Please wait for it to load...",
+              ]);
               return;
             }
             try {
@@ -151,53 +195,78 @@ export function CodeEditor() {
                 from io import StringIO
                 sys.stdout = StringIO()
               `);
-              
+
               // Run the user's code
               const result = await pyodide.runPythonAsync(code);
-              
+
               // Get captured output
               const stdout = pyodide.runPython("sys.stdout.getvalue()");
               if (stdout) {
-                setOutput(prev => [...prev, stdout]);
+                setOutput((prev) => [...prev, stdout]);
               }
-              
+
               // If there's a return value, show it
               if (result !== undefined && result !== null) {
-                setOutput(prev => [...prev, `=> ${result}`]);
+                setOutput((prev) => [...prev, `=> ${result}`]);
               }
-              
+
               // Reset stdout
               pyodide.runPython("sys.stdout = sys.__stdout__");
             } catch (error) {
-              setOutput(prev => [...prev, `❌ Python Error: ${error instanceof Error ? error.message : String(error)}`]);
+              setOutput((prev) => [
+                ...prev,
+                `❌ Python Error: ${
+                  error instanceof Error ? error.message : String(error)
+                }`,
+              ]);
             }
             break;
-            
-          case 'html':
+
+          case "html":
             if (iframeRef.current) {
               iframeRef.current.srcdoc = code;
-              setOutput(prev => [...prev, "HTML rendered in preview area"]);
+              setOutput((prev) => [...prev, "HTML rendered in preview area"]);
             }
             break;
-            
-          case 'css':
-            setOutput(prev => [...prev, "CSS would need to be applied to a DOM element"]);
+
+          case "css":
+            setOutput((prev) => [
+              ...prev,
+              "CSS would need to be applied to a DOM element",
+            ]);
             break;
-            
-          case 'json':
+
+          case "json":
             try {
               const parsed = JSON.parse(code);
-              setOutput(prev => [...prev, "Valid JSON:", JSON.stringify(parsed, null, 2)]);
+              setOutput((prev) => [
+                ...prev,
+                "Valid JSON:",
+                JSON.stringify(parsed, null, 2),
+              ]);
             } catch (e) {
-              setOutput(prev => [...prev, `JSON Error: ${e instanceof Error ? e.message : 'Invalid JSON'}`]);
+              setOutput((prev) => [
+                ...prev,
+                `JSON Error: ${
+                  e instanceof Error ? e.message : "Invalid JSON"
+                }`,
+              ]);
             }
             break;
-            
+
           default:
-            setOutput(prev => [...prev, `No execution handler for ${language}`]);
+            setOutput((prev) => [
+              ...prev,
+              `No execution handler for ${language}`,
+            ]);
         }
       } catch (error) {
-        setOutput(prev => [...prev, `Execution Error: ${error instanceof Error ? error.message : String(error)}`]);
+        setOutput((prev) => [
+          ...prev,
+          `Execution Error: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+        ]);
       }
 
       // Restore original console
@@ -205,10 +274,9 @@ export function CodeEditor() {
       console.error = originalConsole.error;
       console.warn = originalConsole.warn;
       console.info = originalConsole.info;
-
     } finally {
       setIsRunning(false);
-      setOutput(prev => [...prev, `$ Execution completed`]);
+      setOutput((prev) => [...prev, `$ Execution completed`]);
     }
   };
 
@@ -218,10 +286,11 @@ export function CodeEditor() {
 
   return (
     <Card className="w-full overflow-hidden border rounded-lg shadow-lg">
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 border-b bg-card gap-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full sm:w-auto">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between p-4 border-b bg-card gap-4">
+        <div className="flex items-center gap-4">
           <Select value={language} onValueChange={setLanguage}>
-            <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Select language" />
             </SelectTrigger>
             <SelectContent>
@@ -233,7 +302,7 @@ export function CodeEditor() {
             </SelectContent>
           </Select>
           <Select value={theme} onValueChange={setTheme}>
-            <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Select theme" />
             </SelectTrigger>
             <SelectContent>
@@ -245,21 +314,20 @@ export function CodeEditor() {
             </SelectContent>
           </Select>
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <Button 
-            variant="outline" 
-            size="sm" 
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
             onClick={clearOutput}
             disabled={output.length === 0}
-            className="flex-1 sm:flex-none"
-          >
+            className="flex items-center gap-2">
+            <Terminal className="w-4 h-4" />
             Clear Output
           </Button>
-          <Button 
-            onClick={handleRun} 
+          <Button
+            onClick={handleRun}
             disabled={isRunning || (language === "python" && !pyodide)}
-            className="gap-2 flex-1 sm:flex-none"
-          >
+            className="gap-2">
             {isRunning ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin" />
@@ -272,14 +340,35 @@ export function CodeEditor() {
               </>
             )}
           </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDownload}
+            className="flex items-center gap-2">
+            <Download className="w-4 h-4" />
+            Download
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsDarkMode(!isDarkMode)}
+            className="flex items-center gap-2">
+            {isDarkMode ? (
+              <Moon className="w-4 h-4" />
+            ) : (
+              <Sun className="w-4 h-4" />
+            )}
+            {isDarkMode ? "Dark" : "Light"}
+          </Button>
         </div>
       </div>
 
+      {/* Editor */}
       <div className="relative">
         <Editor
           height="60vh"
           language={language}
-          theme={theme}
+          theme={isDarkMode ? "vs-dark" : "light"}
           value={code}
           onChange={(value) => setCode(value || "")}
           options={{
@@ -295,15 +384,17 @@ export function CodeEditor() {
             glyphMargin: false,
             folding: true,
             automaticLayout: true,
-            bracketPairColorization: {
-              enabled: true,
-            },
+            bracketPairColorization: { enabled: true },
             wordWrap: "on",
             wrappingStrategy: "advanced",
           }}
           beforeMount={(monaco) => {
-            monaco.languages.typescript.javascriptDefaults.setEagerModelSync(true);
-            monaco.languages.typescript.typescriptDefaults.setEagerModelSync(true);
+            monaco.languages.typescript.javascriptDefaults.setEagerModelSync(
+              true
+            );
+            monaco.languages.typescript.typescriptDefaults.setEagerModelSync(
+              true
+            );
           }}
           loading={
             <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm">
@@ -315,7 +406,7 @@ export function CodeEditor() {
           }
         />
       </div>
-      
+
       {/* HTML Preview (only shown for HTML) */}
       {language === "html" && (
         <div className="border-t">
@@ -325,7 +416,7 @@ export function CodeEditor() {
               <span>HTML Preview</span>
             </div>
           </div>
-          <iframe 
+          <iframe
             ref={iframeRef}
             className="w-full h-64 border-0 bg-white dark:bg-gray-900"
             sandbox="allow-scripts allow-same-origin"
@@ -333,13 +424,12 @@ export function CodeEditor() {
           />
         </div>
       )}
-      
+
       {/* Output Console */}
       <div className="border-t">
-        <button 
+        <button
           className="flex items-center justify-between w-full p-2 text-sm font-medium bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
-          onClick={() => setShowOutput(!showOutput)}
-        >
+          onClick={() => setShowOutput(!showOutput)}>
           <div className="flex items-center">
             <Terminal className="w-4 h-4 mr-2" />
             <span>Console Output</span>
@@ -349,7 +439,11 @@ export function CodeEditor() {
               </span>
             )}
           </div>
-          <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showOutput ? 'rotate-180' : ''}`} />
+          <ChevronDown
+            className={`w-4 h-4 transition-transform duration-200 ${
+              showOutput ? "rotate-180" : ""
+            }`}
+          />
         </button>
         {showOutput && (
           <div className="h-[120px] overflow-auto p-2 bg-background font-mono text-sm whitespace-pre-wrap">
@@ -360,13 +454,19 @@ export function CodeEditor() {
             ) : (
               <div className="space-y-1">
                 {output.map((line, index) => (
-                  <div key={index} className={`py-0.5 ${
-                    line.startsWith('[error]') || line.includes('❌') ? 'text-red-500' : 
-                    line.startsWith('[warn]') ? 'text-yellow-500' : 
-                    line.includes('✅') ? 'text-green-500' :
-                    line.includes('⏳') ? 'text-blue-500' :
-                    'text-foreground'
-                  }`}>
+                  <div
+                    key={index}
+                    className={`py-0.5 ${
+                      line.startsWith("[error]") || line.includes("❌")
+                        ? "text-red-500"
+                        : line.startsWith("[warn]")
+                        ? "text-yellow-500"
+                        : line.includes("✅")
+                        ? "text-green-500"
+                        : line.includes("⏳")
+                        ? "text-blue-500"
+                        : "text-foreground"
+                    }`}>
                     {line}
                   </div>
                 ))}
